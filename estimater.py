@@ -13,8 +13,8 @@ import nvdiffrast.torch as dr
 from foundationpose.Utils import *
 from foundationpose.datareader import *
 import itertools
-from foundationpose.learning.training.predict_score import *
-from foundationpose.learning.training.predict_pose_refine import *
+from foundationpose.learning.training.predict_score import *  # Get ScorePredictor
+from foundationpose.learning.training.predict_pose_refine import * # Get PoseRefinePredictor
 
 class Any6D:
     def __init__(self, symmetry_tfs=None, mesh=None, scorer: ScorePredictor = ScorePredictor(),
@@ -50,8 +50,9 @@ class Any6D:
         self.pose_last = None  # Used for tracking; per the centered mesh
 
     def reset_object(self, mesh=None, symmetry_tfs=None):
-
-
+        '''
+        Reset the object by re-centering the mesh, convert to Open3D mesh, normalize with the diameter and prepare mesh tensors.
+        '''
         # center = mesh_o3d.get_oriented_bounding_box(robust=True).center
         # self.model_center = center
 
@@ -134,6 +135,9 @@ class Any6D:
             self.glctx = dr.RasterizeCudaContext(s)
 
     def make_rotation_grid(self, min_n_views=40, inplane_step=60):
+        '''
+        Generate a grid of camera poses around the object.
+        '''
         cam_in_obs = sample_views_icosphere(n_views=min_n_views)
         # logging.info(f'cam_in_obs:{cam_in_obs.shape}')
         rot_grid = []
@@ -165,6 +169,7 @@ class Any6D:
         ob_in_cams[:, :3, 3] = torch.tensor(center, device='cuda', dtype=torch.float).reshape(1, 3)
         return ob_in_cams
 
+# guess_translation_bounding_box and guess_translation are utility functions to estimate the initial pose.
     def guess_translation_bounding_box(self, depth, mask, K):
         xyz_map = depth2xyzmap(depth, K)
 
@@ -215,8 +220,10 @@ class Any6D:
 
         return center.reshape(3)
 
+    # Basically the same method as FoundationPose with the Any6D preprocessing and initial pose generation.
+    # This function is used for the query pose, once the anchor mesh is obtained and aligned.
     def register(self, K, rgb, depth, ob_mask, ob_id=None, glctx=None, iteration=5, name=None,no_center=False, initial_center=False):
-        '''Copmute pose from given pts to self.pcd
+        '''Compute pose from given pts to self.pcd
         @pts: (N,3) np array, downsampled scene points
         '''
         set_seed(0)
@@ -224,15 +231,15 @@ class Any6D:
 
         if self.glctx is None:
             if glctx is None:
-                self.glctx = dr.RasterizeCudaContext()
+                self.glctx = dr.RasterizeCudaContext() # GPU rendering context
                 # self.glctx = dr.RasterizeGLContext()
             else:
                 self.glctx = glctx
 
-        depth = erode_depth(depth, radius=2, device='cuda')
-        depth = bilateral_filter_depth(depth, radius=2, device='cuda')
+        depth = erode_depth(depth, radius=2, device='cuda') # Remove noise pixels from depth map
+        depth = bilateral_filter_depth(depth, radius=2, device='cuda') # Makes smoothing, but without smoothing the edges of objects
 
-        depth[ob_mask==False] = 0
+        depth[ob_mask==False] = 0 # Keeps only the object mask
 
         # if self.debug >= 2:
         #     xyz_map = depth2xyzmap(depth, K)
@@ -261,6 +268,7 @@ class Any6D:
         self.ob_id = ob_id
         self.ob_mask = ob_mask
 
+        # Generate random poses based on the rotation grid and translation estimation
         poses = self.generate_random_pose_hypo(K=K, rgb=rgb, depth=depth, mask=ob_mask, scene_pts=None,initial_center=initial_center)
         poses = poses.data.cpu().numpy()
         # logging.info(f'poses:{poses.shape}')
@@ -272,7 +280,7 @@ class Any6D:
         poses = torch.as_tensor(poses, device='cuda', dtype=torch.float)
         poses[:, :3, 3] = torch.as_tensor(center.reshape(1, 3), device='cuda')
 
-        add_errs = self.compute_add_err_to_gt_pose(poses)
+        add_errs = self.compute_add_err_to_gt_pose(poses) # Doesn't do anything yet, because it needs ground truth poses
         # logging.info(f"after viewpoint, add_errs min:{add_errs.min()}")
 
         xyz_map = depth2xyzmap(depth, K)
@@ -311,9 +319,9 @@ class Any6D:
         else:
             return best_pose.data.cpu().numpy()
 
-
+    # This function can be used to compute the anchor pose or directly the solution, when the anchor is not available
     def register_any6d(self, K, rgb, depth, ob_mask, ob_id=None, glctx=None, iteration=5, name=None, refinement=True, axis_align=True,coarse_est=True):
-        '''Copmute pose from given pts to self.pcd
+        '''Compute pose from given pts to self.pcd
         @pts: (N,3) np array, downsampled scene points
         '''
         set_seed(0)
@@ -330,48 +338,52 @@ class Any6D:
 
         xyz_map[ob_mask == False] = 0
         points = xyz_map[ob_mask].reshape(-1, 3)
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(points)
+        pcd = o3d.geometry.PointCloud() # Convert to Open3D point cloud
+        pcd.points = o3d.utility.Vector3dVector(points) 
         pcd.colors = o3d.utility.Vector3dVector(np.tile([0.529, 0.808, 0.922], (len(pcd.points), 1)))  # 모든 point를 파란색으로
 
 
         pcd_clean, ind = pcd.remove_statistical_outlier(nb_neighbors=int(points.shape[0] * 0.01), std_ratio=2.0)
-        pcd_clean.translate(-pcd_clean.get_oriented_bounding_box(robust=True).center)
+        pcd_clean.translate(-pcd_clean.get_oriented_bounding_box(robust=True).center) # Center the point cloud in the origin
 
+        # Get oriented bounding box using estimated oriented normals
         pcd_clean.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=1.0, max_nn=20))
         pcd_clean.orient_normals_consistent_tangent_plane(k=1000)
         obb_pcd_clean = pcd_clean.get_oriented_bounding_box()
-        obb_pcd_clean.color = (0, 0, 0)
+        obb_pcd_clean.color = (0, 0, 0) # Observed bounding box colored in black
 
         if coarse_est:
             mesh_pcd = copy.deepcopy(self.mesh_o3d)
-            pcd_ = mesh_pcd.sample_points_uniformly(number_of_points=100000)
+            pcd_ = mesh_pcd.sample_points_uniformly(number_of_points=100000) # Uniformly sample points from the mesh surface
             cl, _ = pcd_.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
-            obb_mesh = cl.get_oriented_bounding_box()
-            obb_mesh.color = (0, 0, 1)
+            obb_mesh = cl.get_oriented_bounding_box() # Get oriented bounding box of the mesh point cloud
+            obb_mesh.color = (0, 0, 1) # Bounding box for the mesh of the object colored in blue
 
-            if axis_align:
+            if axis_align: # Align the observed point cloud with the object's mesh
                 pcd_clean.rotate(obb_mesh.R @ obb_pcd_clean.R.T, center=obb_pcd_clean.center)
             else:
                 pass
             obb_pcd_clean = pcd_clean.get_oriented_bounding_box(robust=True)
-            obb_pcd_clean.color = (0, 1, 0)
+            obb_pcd_clean.color = (0, 1, 0) # Aligned observed bounding box colored in green
 
-
+            # Extract dimensions (extent is a vector [length, width, height])
             extent_pcd_clean = obb_pcd_clean.extent
             extent_mesh = obb_mesh.extent
 
+            # Find the best ratio combination between the observed point cloud and the mesh, scale the mesh accordingly and get the new oriented bounding box
             ratio, best_perm, best_iou = find_best_ratio_combination(extent_pcd_clean, extent_mesh, obb_pcd_clean, obb_mesh)
-            mesh_pcd.scale(ratio[1], center=obb_mesh.center) # y axis (height)
+            mesh_pcd.scale(ratio[1], center=obb_mesh.center) # Scaling only along the y-axis (height)
+            
 
             obb_mesh = mesh_pcd.get_oriented_bounding_box(robust=True)
-            obb_mesh.color = (1, 0, 0)
+            obb_mesh.color = (1, 0, 0) # Bounding box of the mesh after scaling, colored in red
 
             mesh = copy.deepcopy(self.mesh)
-            mesh.vertices = np.asarray(mesh_pcd.vertices)
+            mesh.vertices = np.asarray(mesh_pcd.vertices) 
             self.reset_object(mesh=mesh, symmetry_tfs=self.symmetry_tfs)
             self.mesh.export(os.path.join(self.debug_dir, f'refine_init_mesh_{name}.obj'))
 
+        # Filter only 'useful points'
         valid_indices = np.argwhere(ob_mask)  # Get (h, w) coordinates where ob_mask is True
         selected_indices = valid_indices[ind]  # Use the indices from the outlier filtering to get (h, w)
 
@@ -394,6 +406,7 @@ class Any6D:
         self.ob_id = ob_id
         self.ob_mask = ob_mask
 
+        ## First pose generation, refinement and selection with FoundationPose
         poses = self.generate_random_pose_hypo(K=K, rgb=rgb, depth=depth, mask=ob_mask, scene_pts=None)
         poses = poses.data.cpu().numpy()
         center = self.guess_translation(depth=depth, mask=ob_mask, K=K)
@@ -427,13 +440,17 @@ class Any6D:
 
 
         if refinement:
-            cam_in_ob = np.linalg.inv(best_pose)
+            ## Axis alignment and mesh scaling
+            cam_in_ob = np.linalg.inv(best_pose) # Take the inverse to get the transformation from camera to object
             points = xyz_map[ob_mask].reshape(-1, 3)
             pcd = o3d.geometry.PointCloud()
             pcd.points = o3d.utility.Vector3dVector(points)
-            pcd.paint_uniform_color([1,0,0])
+            pcd.paint_uniform_color([1,0,0]) # Colored red the observed points
             pcd_clean, ind = pcd.remove_statistical_outlier(nb_neighbors=int(points.shape[0] * 0.01), std_ratio=2.0)
-            pcd_clean.transform(cam_in_ob)
+            pcd_clean.transform(cam_in_ob) # Transform the observed points to the object coordinate system
+
+            ### Stampa per capire bene cosa vuole dire che la point cloud viene trasformata da coordinate della camera a quelle dell'oggetto ###
+            ### Il mio problema è che penso che le coordinate oggetto siano date dalla point cloud ###
 
             mesh_pcd = (copy.deepcopy(self.mesh_o3d))
             obb_mesh = mesh_pcd.get_oriented_bounding_box(robust=True)
@@ -442,7 +459,7 @@ class Any6D:
             obb_pcd_clean = pcd_clean.get_oriented_bounding_box(robust=True)
             obb_pcd_clean.color = (0, 1, 0)
 
-            if axis_align:
+            if axis_align: # More precise alignement of the point cloud because we are working in object coordinates
                 pcd_clean.rotate(obb_mesh.R @ obb_pcd_clean.R.T, center=obb_pcd_clean.center)
             else:
                 pass
@@ -453,19 +470,21 @@ class Any6D:
 
             extent_pcd_clean = obb_pcd_clean.extent
             extent_mesh = obb_mesh.extent
-            ratio = extent_pcd_clean / extent_mesh
+            ratio = extent_pcd_clean / extent_mesh # Scaling in XYZ of the mesh
             mesh_pcd.translate(obb_pcd_clean.center - obb_mesh.center)
-            mesh_pcd.vertices = o3d.utility.Vector3dVector(np.array(mesh_pcd.vertices) * ratio[None])
+            mesh_pcd.vertices = o3d.utility.Vector3dVector(np.array(mesh_pcd.vertices) * ratio[None]) # Vertices are the points of the mesh. We get the scaling by multiplying with the ratio
             mesh_pcd.translate(obb_mesh.center - obb_pcd_clean.center)
 
             obb_mesh = mesh_pcd.get_oriented_bounding_box(robust=True)
             obb_mesh.color = (0, 1, 0)
             # o3d.visualization.draw_geometries([obb_mesh, pcd_clean, mesh_pcd,coordinate_frame, obb_pcd_clean])
 
+            ## Object update
             mesh = copy.deepcopy(self.mesh)
             mesh.vertices = np.asarray(mesh_pcd.vertices)
             self.reset_object(mesh=mesh, symmetry_tfs=self.symmetry_tfs)
 
+            ## Second pose generation, refinement and selection with FoundationPose
             poses = self.generate_random_pose_hypo(K=K, rgb=rgb, depth=depth, mask=ob_mask, scene_pts=None)
             poses = poses.data.cpu().numpy()
             poses = torch.as_tensor(poses, device='cuda', dtype=torch.float)
@@ -497,9 +516,10 @@ class Any6D:
 
         if refinement:
             best_pose = poses[0].data.cpu().numpy()
+            ## Size generation and selection
             if True:
                 # 252 samples
-                # Define the number of samples
+                # Define the number of size samples
                 num_samples = 252
 
                 # Define the scaling ratios for each axis
@@ -509,6 +529,7 @@ class Any6D:
                 # Generate random scaling values for each axis
                 samples = {axis: np.random.uniform(*ratio, num_samples) for axis, ratio in ratios.items()}
                 # This creates a dictionary with keys 'x', 'y', 'z', each containing an array of 252 random values
+                # i.e. 252 combinations of random x,y,z values in the given range
 
                 # Create scaling matrices
                 scaling_matrices = np.array([np.diag([samples['x'][i], samples['y'][i], samples['z'][i], 1]) for i in range(num_samples)])
@@ -556,6 +577,7 @@ class Any6D:
             self.reset_object(mesh=self.mesh, symmetry_tfs=self.symmetry_tfs)
             self.mesh.export(os.path.join(self.debug_dir, f'final_mesh_{name}.obj'))
 
+            ## Final pose refinement and selection with FoundationPose (with optimal mesh)
             poses, vis = self.refiner.predict(mesh=self.mesh, mesh_tensors=self.mesh_tensors, rgb=rgb, depth=depth, K=K,
                                               ob_in_cams=poses.data.cpu().numpy(), normal_map=normal_map,
                                               xyz_map=xyz_map,
@@ -595,6 +617,9 @@ class Any6D:
         '''
         return -torch.ones(len(poses), device='cuda', dtype=torch.float)
 
+
+    # track_one and track_one_any6d are used for tracking the object in a video sequence, by taking the last pose as the initial pose.
+    # Using single-shot refinement, instead of the full registration process, to make it faster
     def track_one(self, rgb, depth, K, iteration, extra={},no_center=False):
         if self.pose_last is None:
             # logging.info("Please init pose by register first")

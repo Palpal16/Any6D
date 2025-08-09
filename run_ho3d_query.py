@@ -10,6 +10,8 @@ from bop_toolkit_lib.renderer_vispy import RendererVispy
 from pytorch_lightning import seed_everything
 from datetime import datetime
 
+# È progettato per processare query views usando le pose di riferimento generate dall'anchor
+# Lavoro su sequenze di video di HO3D
 if __name__ == '__main__':
 
     seed_everything(0)

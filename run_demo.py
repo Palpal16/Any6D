@@ -18,10 +18,15 @@ from sam2_instantmesh import *
 
 glctx = dr.RasterizeCudaContext()
 
+
+# Demo script to run estimation on an image given 
 if __name__=='__main__':
 
     seed_everything(0)
-
+    
+    # Takes the input when the script is run
+    # Example: python run_demo.py --ycb_model_path /path/to/YCB_Video_Models --img_to_3d
+    # If --img_to_3d is not provided, the mesh will be loaded from the demo_data directory
     parser = argparse.ArgumentParser(description="Set experiment name and paths")
     parser.add_argument("--ycb_model_path", type=str, default="/home/miruware/ssd_4tb/dataset/ho3d/YCB_Video_Models", help="Path to the YCB Video Models")
     parser.add_argument("--img_to_3d", action="store_true",help="Running with InstantMesh+SAM2")
@@ -40,16 +45,17 @@ if __name__=='__main__':
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    depth_scale = 1000.0
-    color = cv2.cvtColor(cv2.imread(os.path.join(demo_path, 'color.png')), cv2.COLOR_BGR2RGB)
-    depth = cv2.imread(os.path.join(demo_path, 'depth.png'), cv2.IMREAD_ANYDEPTH).astype(np.float32) / depth_scale
+    depth_scale = 1000.0 
+    color = cv2.cvtColor(cv2.imread(os.path.join(demo_path, 'color.png')), cv2.COLOR_BGR2RGB) # Change BGR to RGB
+    depth = cv2.imread(os.path.join(demo_path, 'depth.png'), cv2.IMREAD_ANYDEPTH).astype(np.float32) / depth_scale # Convert depth to meters
     Image.fromarray(color).save(os.path.join(save_path, 'color.png'))
 
     label = np.load(os.path.join(demo_path, 'labels.npz'))
-    obj_num = 5
-    mask = np.where(label['seg'] == obj_num, 255, 0).astype(np.bool_)
+    obj_num = 5 # Mustard bottle is object number 5 in the dataset (in demo_data directory)
+    mask = np.where(label['seg'] == obj_num, 255, 0).astype(np.bool_) # Create a mask for the object
 
-    if img_to_3d:
+    # InstantMesh + SAM2 processing for 3D mesh generation
+    if img_to_3d: ##### Yet to be analysed #####
         cmin, rmin, cmax, rmax = get_bounding_box(mask).astype(np.int32)
         input_box = np.array([cmin, rmin, cmax, rmax])[None, :]
         mask_refine = running_sam_box(color, input_box)
@@ -67,18 +73,23 @@ if __name__=='__main__':
         mesh = trimesh.load(mesh_path)
 
 
-    est = Any6D(symmetry_tfs=None, mesh=mesh, debug_dir=save_path, debug=2)
+
+
+
+
+    est = Any6D(symmetry_tfs=None, mesh=mesh, debug_dir=save_path, debug=2) #Initialize the estimator class (see estimater.py)
 
     # camera info
     intrinsic_path = f"{demo_path}/836212060125_640x480.yml"
     with open(intrinsic_path, 'r') as file:
         data = yaml.load(file, Loader=yaml.FullLoader)
-
     intrinsic = np.array([[data["depth"]["fx"], 0.0, data["depth"]["ppx"]], [0.0, data["depth"]["fy"], data["depth"]["ppy"]], [0.0, 0.0, 1.0], ], )
     np.savetxt(os.path.join(save_path, f'K.txt'), intrinsic)
 
+    # Main function to estimate the pose
     pred_pose = est.register_any6d(K=intrinsic, rgb=color, depth=depth, ob_mask=mask, iteration=5, name=f'demo')
 
+    # Load ground truth pose and mesh
     pose_list = label['pose_y']
     index_list = np.unique(label['seg'])
     index = (np.where(index_list == obj_num)[0] - 1).tolist()[0]
@@ -88,6 +99,7 @@ if __name__=='__main__':
 
     gt_mesh = trimesh.load(f'{ycb_model_path}/models/006_mustard_bottle/textured_simple.obj')
 
+    # Compute Chamfer distance for evaluation
     chamfer_dis = calculate_chamfer_distance_gt_mesh(gt_pose, gt_mesh, pred_pose, est.mesh)
     print(chamfer_dis)
 

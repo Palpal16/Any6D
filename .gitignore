@@ -228,3 +228,12 @@ instantmesh/figures*/
 instantmesh/*.sh
 instantmesh/blender/
 instantmesh/.restore/
+
+# My IGNORE
+**/.DS_Store
+
+**/.vscode
+
+ColabAny6D.ipynb
+
+PaperAny6D.pd
