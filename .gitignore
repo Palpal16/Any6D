@@ -5,12 +5,12 @@ __pycache__/
 .idea/
 
 results
-sam2/checkpoints/
-instantmesh/ckpts/
+#sam2/checkpoints/
+#instantmesh/ckpts/
 instantmesh/outputs/
 
 foundationpose/build
-foundationpose/weights
+#foundationpose/weights
 __pycache__
 build
 dist
@@ -52,7 +52,7 @@ foundationpose/dist/
 # foundationpose/*.png
 # foundationpose/*.jpg
 foundationpose/debug/
-foundationpose/weights/*
+#foundationpose/weights/*
 foundationpose/downloads/
 foundationpose/eggs/
 foundationpose/.eggs/
@@ -101,7 +101,7 @@ foundationpose/*.py,cover
 foundationpose/.hypothesis/
 foundationpose/.pytest_cache/
 foundationpose/*.pth
-foundationpose/weights/
+#foundationpose/weights/
 
 # Translations
 foundationpose/*.mo
@@ -216,7 +216,7 @@ instantmesh/.DS_Store
 
 instantmesh/tools/objaverse_rendering/blender-3.2.2-linux-x64/
 instantmesh/tools/objaverse_rendering/output/
-instantmesh/ckpts/
+#instantmesh/ckpts/
 instantmesh/lightning_logs/
 instantmesh/logs/
 instantmesh/.trash/
@@ -233,7 +233,5 @@ instantmesh/.restore/
 **/.DS_Store
 
 **/.vscode
-
-ColabAny6D.ipynb
 
 PaperAny6D.pdf
