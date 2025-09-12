@@ -1,19 +1,20 @@
 #!/bin/bash
 
+# Before running create and activate the environment
+# conda create -n myany6d python=3.9 -y
+# conda activate myany6d
+
 set -e
-
-# create conda environment
-conda create -n any6d python=3.9 -y
-
-# activate conda environment
-conda activate any6d
 
 # Install Eigen3 3.4.0 under conda environment
 conda install conda-forge::eigen=3.4.0 -y
 export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH:/eigen/path/under/conda"
 
+# Install updated C++ standard library to avoid GLIBCXX compatibility issues
+conda install -c conda-forge libstdcxx-ng -y
+
 # install dependencies from requirements
-pip install -r requirements_clean.txt
+pip install -r requirements.txt
 
 # install specialized packages
 pip install --no-cache-dir git+https://github.com/NVlabs/nvdiffrast.git
@@ -25,5 +26,14 @@ pip install --extra-index-url https://miropsota.github.io/torch_packages_builder
 conda install cmake -y
 CMAKE_PREFIX_PATH=$CONDA_PREFIX/lib/python3.9/site-packages/pybind11/share/cmake/pybind11 bash foundationpose/build_all_conda.sh
 
+# setup sam2
+cd sam2
+pip install -e .
+cd ..
 
-# CUDA_VISIBLE_DEVICES=1 python run_demo.py --ycb_model_path demo_data/ --img_to_3d
+# setup bop_toolkit
+cd bop_toolkit
+pip install -e .
+cd ..
+
+# CUDA_VISIBLE_DEVICES=1 python run_demo.py --path demo_data/single_image --img_to_3d

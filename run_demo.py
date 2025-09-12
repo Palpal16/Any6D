@@ -20,22 +20,22 @@ glctx = dr.RasterizeCudaContext()
 
 # Demo to obtain the 6D pose of an object from a single RGB-D image (method for anchor images)
 if __name__=='__main__':
-    # Example: python run_demo.py --ycb_model_path /path/to/YCB_Video_Models --img_to_3d
+    # Example: python run_demo.py --path demo_data/single_image --img_to_3d
     # If --img_to_3d is not provided, the mesh will be loaded from the demo_data directory
 
     seed_everything(0)
 
     parser = argparse.ArgumentParser(description="Set experiment name and paths")
-    parser.add_argument("--ycb_model_path", type=str, default="demo_data/", help="Path to the YCB Video Models")
+    parser.add_argument("--path", type=str, default="demo_data/single_image", help="Path to the YCB Video Models and demo data")
     parser.add_argument("--img_to_3d", action="store_true",help="Running with InstantMesh+SAM2")
     args = parser.parse_args()
 
 
-    ycb_model_path = args.ycb_model_path
+    ycb_model_path = args.path
     img_to_3d = args.img_to_3d
 
     results = []
-    demo_path = 'demo_data'
+    demo_path = ycb_model_path
     mesh_path = os.path.join(demo_path, f'mustard.obj')
 
     obj = 'demo_mustard'

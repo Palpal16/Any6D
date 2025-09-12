@@ -122,8 +122,8 @@ class Ho3dReader:
   #   return mesh
 
 
-  def get_gt_mesh_diamter(self):
-    gt_diameter = calc_pts_diameter(np.array(self.get_gt_mesh().vertices))
+  def get_gt_mesh_diameter(self,model_dir='/home/../Experiments/simonep01/ho3d'):
+    gt_diameter = calc_pts_diameter(np.array(self.get_gt_mesh(model_dir).vertices))
     return gt_diameter
 
   def get_depth(self,i):
@@ -152,7 +152,7 @@ class Ho3dReader:
     return ob_in_cam_gt
 
 
-  def get_gt_mesh(self, model_dir='/home/miruware/ssd_4tb/dataset/ho3d/YCB_Video_Models'):
+  def get_gt_mesh(self, model_dir='/home/../Experiments/simonep01/ho3d'):
     mesh = trimesh.load(f'{model_dir}/models/{self.get_video_name_full()}/textured_simple.obj')
     return mesh
 

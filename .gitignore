@@ -4,7 +4,7 @@ __pycache__/
 
 .idea/
 
-results
+results/
 sam2/checkpoints/
 instantmesh/ckpts/
 instantmesh/outputs/
