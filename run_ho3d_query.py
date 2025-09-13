@@ -19,7 +19,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Set experiment name and paths")
 
     parser.add_argument("--name", type=str, default="any6d", help="Experiment name")
-    parser.add_argument("--anchor_path", type=str, default="demo_data/light_ho3d/anchors/", help="Path to the YCB-V model info JSON")
+    parser.add_argument("--anchor_path", type=str, default="demo_data/light_ho3d/anchors/", help="Path to anchor files")
     parser.add_argument("--hot3d_data_root", type=str, default="demo_data/light_ho3d/", help="Path to the HO3D dataset root")
     parser.add_argument("--ycb_model_path", type=str, default="demo_data/light_ho3d/", help="Path to the YCB Video Models")
     parser.add_argument("--ycbv_models_info_path", type=str, default="./models_info.json", help="Path to the YCB-V model info JSON")
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     anchor_path = args.anchor_path
     ycb_model_path = args.ycb_model_path
 
-    date_str = f'{datetime.now():%Y-%m-%d_%H-%M-%S}'
+    date_str = f'{datetime.now():%Y-%m-%d_%H-%M}'
     save_root = f"./results/ho3d_results/{name}/{date_str}"
     save_results_est_path = f'{save_root}'
 
@@ -122,6 +122,7 @@ if __name__ == '__main__':
         pred_pose_a = np.loadtxt(reader.get_reference_view_1_pose(anchor_path))
         gt_pose_a = np.loadtxt(reader.get_reference_view_1_pose(anchor_path).replace('initial','gt'))
 
+# Forse potrei modificare qui per ottenre la simmetria ?????
         est.reset_object(mesh=mesh, symmetry_tfs=None)
 
         for i in tqdm(range(0, len(reader.color_files), 1), desc=f"{obj_f} - Frames"):

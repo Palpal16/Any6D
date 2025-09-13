@@ -554,17 +554,17 @@ class LinemodOcclusionReader(BopBaseReader):
 
 
 class LinemodReader(LinemodOcclusionReader):
-  def __init__(self, base_dir='/mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763/DATASET/LINEMOD/lm_test_all/test/000001', zfar=np.inf, split=None):
+  def __init__(self, base_dir='/home/../DATA/bop_classic/lmo/test/000002', zfar=np.inf, split=None):
     super().__init__(base_dir, zfar=zfar)
     self.dataset_name = 'lm'
-    if split is not None:  # train/test
-      with open(f'/mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763/DATASET/LINEMOD/Linemod_preprocessed/data/{self.get_video_id():02d}/{split}.txt','r') as ff:
-        lines = ff.read().splitlines()
-      self.color_files = []
-      for line in lines:
-        id = int(line)
-        self.color_files.append(f'{self.base_dir}/rgb/{id:06d}.png')
-      self.make_id_strs()
+#    if split is not None:  # train/test
+#      with open(f'/mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763/DATASET/LINEMOD/Linemod_preprocessed/data/{self.get_video_id():02d}/{split}.txt','r') as ff:
+#        lines = ff.read().splitlines()
+#      self.color_files = []
+#      for line in lines:
+#        id = int(line)
+#        self.color_files.append(f'{self.base_dir}/rgb/{id:06d}.png')
+#      self.make_id_strs()
 
     self.ob_ids = np.setdiff1d(np.arange(1,16), np.array([7,3])).tolist()  # Exclude bowl and mug
     self.load_symmetry_tfs()
@@ -573,8 +573,8 @@ class LinemodReader(LinemodOcclusionReader):
   def get_gt_mesh_file(self, ob_id):
     root = self.base_dir
     while 1:
-      if os.path.exists(f'{root}/lm_models'):
-        mesh_dir = f'{root}/lm_models/models/obj_{ob_id:06d}.ply'
+      if os.path.exists(f'{root}/models'):
+        mesh_dir = f'{root}/models/obj_{ob_id:06d}.ply'
         break
       else:
         root = os.path.abspath(f'{root}/../')
