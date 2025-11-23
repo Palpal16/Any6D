@@ -115,15 +115,14 @@ def make_crop_data_batch(render_size, ob_in_cams, mesh, rgb, depth, K, crop_rati
 
 
 class ScorePredictor:
-  def __init__(self, amp=True):
+  def __init__(self, amp=True, ckpt_root_dir='/home/../Experiments/simonep01/checkpoints/FP_weights'):
     self.amp = amp
     self.run_name = "2024-01-11-20-02-45"
 
     model_name = 'model_best.pth'
-    code_dir = os.path.dirname(os.path.realpath(__file__))
-    ckpt_dir = f'{code_dir}/../../weights/{self.run_name}/{model_name}'
+    ckpt_dir = f'{ckpt_root_dir}/{self.run_name}/{model_name}'
 
-    self.cfg = OmegaConf.load(f'{code_dir}/../../weights/{self.run_name}/config.yml')
+    self.cfg = OmegaConf.load(f'{ckpt_root_dir}/{self.run_name}/config.yml')
 
     self.cfg['ckpt_dir'] = ckpt_dir
     self.cfg['enable_amp'] = True

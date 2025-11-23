@@ -566,7 +566,7 @@ class LinemodReader(LinemodOcclusionReader):
 #        self.color_files.append(f'{self.base_dir}/rgb/{id:06d}.png')
 #      self.make_id_strs()
 
-    self.ob_ids = np.setdiff1d(np.arange(1,16), np.array([7,3])).tolist()  # Exclude bowl and mug
+    self.ob_ids = np.setdiff1d(np.arange(1,13), np.array([2,3,4,7])).tolist()
     self.load_symmetry_tfs()
 
 

@@ -16,7 +16,7 @@ model_config:
 
 
 infer_config:
-  unet_path: ./instantmesh/ckpts/diffusion_pytorch_model.bin
-  model_path: ./instantmesh/ckpts/instant_mesh_large.ckpt
+  unet_path: /home/../Experiments/simonep01/checkpoints/instantmesh_ckpts/diffusion_pytorch_model.bin
+  model_path: /home/../Experiments/simonep01/checkpoints/instantmesh_ckpts/instant_mesh_large.ckpt
   texture_resolution: 1024
   render_resolution: 512

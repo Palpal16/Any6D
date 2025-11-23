@@ -70,7 +70,7 @@ def get_bounding_box(d_model, pad_rel=0.00, return_torch=False):
         return bounding_box
 
 
-def running_sam_box(color, box=None,checkpoint="./sam2/checkpoints/sam2.1_hiera_large.pt", model_cfg = "./sam2/configs/sam2.1/sam2.1_hiera_l.yaml"):
+def running_sam_box(color, box=None,checkpoint="/home/../Experiments/simonep01/checkpoints/sam2_checkpoints/sam2.1_hiera_large.pt", model_cfg = "./sam2/configs/sam2.1/sam2.1_hiera_l.yaml"):
     sam_predictor = SAM2ImagePredictor(build_sam2(model_cfg, checkpoint))
     with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
         sam_predictor.set_image(color)

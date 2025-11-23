@@ -36,4 +36,4 @@ cd bop_toolkit
 pip install -e .
 cd ..
 
-# CUDA_VISIBLE_DEVICES=1 python run_demo.py --path demo_data/single_image --img_to_3d
+# CUDA_VISIBLE_DEVICES=1 python run_demo.py --path /home/../Experiments/simonep01/demo_data/single_image --img_to_3d

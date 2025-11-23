@@ -11,7 +11,7 @@ from pytorch_lightning import seed_everything
 from datetime import datetime
 
 
-# CUDA_VISIBLE_DEVICES=1 python run_ho3d_query.py --anchor_path demo_data/light_ho3d/anchors/ --hot3d_data_root demo_data/light_ho3d/ --ycb_model_path demo_data/light_ho3d/
+# CUDA_VISIBLE_DEVICES=1 python run_ho3d_query.py --anchor_path demo_data/light_ho3d/anchors/ --hot3d_data_root /home/../Experiments/simonep01/demo_data/light_ho3d/ --ycb_model_path /home/../Experiments/simonep01/demo_data/light_ho3d/
 if __name__ == '__main__':
 
     seed_everything(0)
@@ -20,8 +20,8 @@ if __name__ == '__main__':
 
     parser.add_argument("--name", type=str, default="any6d", help="Experiment name")
     parser.add_argument("--anchor_path", type=str, default="demo_data/light_ho3d/anchors/", help="Path to anchor files")
-    parser.add_argument("--hot3d_data_root", type=str, default="demo_data/light_ho3d/", help="Path to the HO3D dataset root")
-    parser.add_argument("--ycb_model_path", type=str, default="demo_data/light_ho3d/", help="Path to the YCB Video Models")
+    parser.add_argument("--hot3d_data_root", type=str, default="/home/../Experiments/simonep01/demo_data/light_ho3d/", help="Path to the HO3D dataset root")
+    parser.add_argument("--ycb_model_path", type=str, default="/home/../Experiments/simonep01/demo_data/light_ho3d/", help="Path to the YCB Video Models")
     parser.add_argument("--ycbv_models_info_path", type=str, default="./models_info.json", help="Path to the YCB-V model info JSON")
     parser.add_argument("--running_stride", type=int, default=10, help="Running stride")
     # running_stride = 10 implies that only one frame every 10 is used for evaluation
@@ -35,8 +35,8 @@ if __name__ == '__main__':
     anchor_path = args.anchor_path
     ycb_model_path = args.ycb_model_path
 
-    date_str = f'{datetime.now():%Y-%m-%d_%H-%M}'
-    save_root = f"./results/ho3d_results/{name}/{date_str}"
+    date_str = f'{datetime.now():%m-%d_%H-%M}'
+    save_root = f"./results/ho3d_results/{name}_{date_str}"
     save_results_est_path = f'{save_root}'
 
     os.makedirs(save_results_est_path, exist_ok=True)

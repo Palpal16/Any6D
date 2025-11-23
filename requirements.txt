@@ -16,7 +16,7 @@ pybullet==3.2.5
 transformers==4.44.2
 huggingface-hub>=0.24.0,<1.0
 tokenizers>=0.14.0
-diffusers>=0.20.0
+diffusers>=0.35.1
 gradio>=3.40.0
 accelerate
 datasets
